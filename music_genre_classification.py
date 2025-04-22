@@ -9,7 +9,7 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.models import Sequential # type: ignore
-from tensorflow.keras.layers import Dense, Dropout, Conv2D, MaxPooling2D, Flatten, BatchNormalization# type: ignore
+from tensorflow.keras.layers import Dense, Dropout, Conv2D, MaxPooling2D, Flatten, BatchNormalization # type: ignore
 from tensorflow.keras.utils import to_categorical # type: ignore
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau # type: ignore
 import tensorflow as tf
@@ -241,7 +241,6 @@ def visualize_sample_mfcc(data):
     plt.tight_layout()
     plt.show()
 
-
 def main():
     # Load data
     data_path = "Data/genres_original"
@@ -250,37 +249,44 @@ def main():
     # Prepare datasets
     X_train, X_test, y_train, y_test = prepare_datasets(data)
     
-    # Build model
-    input_shape = (X_train.shape[1], X_train.shape[2], X_train.shape[3])
-    model = build_model(input_shape)
-    
-    # Compile model
-    model.compile(optimizer='adam',
-                 loss='sparse_categorical_crossentropy',
-                 metrics=['accuracy'])
-    
-    # Callbacks
-    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-    model_checkpoint = ModelCheckpoint('best_model.h5', monitor='val_accuracy', save_best_only=True)
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, min_lr=0.00001)
-    
-    # Train model
-    history = model.fit(X_train, y_train,
-                       validation_data=(X_test, y_test),
-                       epochs=50,
-                       batch_size=32,
-                       callbacks=[early_stopping, model_checkpoint, reduce_lr])
+    # Check if a trained model exists
+    model_path = "music_genre_classifier.h5"
+    if os.path.exists(model_path):
+        print(f"Loading existing model from {model_path}")
+        model = tf.keras.models.load_model(model_path)
+    else:
+        print("No existing model found. Training new model...")
+        # Build model
+        input_shape = (X_train.shape[1], X_train.shape[2], X_train.shape[3])
+        model = build_model(input_shape)
+        
+        # Compile model
+        model.compile(optimizer='adam',
+                     loss='sparse_categorical_crossentropy',
+                     metrics=['accuracy'])
+        
+        # Callbacks
+        early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+        model_checkpoint = ModelCheckpoint('best_model.h5', monitor='val_accuracy', save_best_only=True)
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, min_lr=0.00001)
+        
+        # Train model
+        history = model.fit(X_train, y_train,
+                           validation_data=(X_test, y_test),
+                           epochs=50,
+                           batch_size=32,
+                           callbacks=[early_stopping, model_checkpoint, reduce_lr])
+        
+        # Plot history
+        plot_history(history)
+        
+        # Save model
+        model.save(model_path)
     
     # Evaluate model
     test_loss, test_acc = model.evaluate(X_test, y_test)
     print(f"\nTest accuracy: {test_acc:.4f}")
     print(f"Test loss: {test_loss:.4f}")
-    
-    # Plot history
-    plot_history(history)
-    
-    # Save model
-    model.save("music_genre_classifier.h5")
 
 if __name__ == "__main__":
     main()
@@ -294,5 +300,5 @@ if __name__ == "__main__":
     visualize_sample_mfcc(data)
 
     # Predict a new song
-    new_song_path = "/Users/abhishek_r/Desktop/Programs/ML_LAB/ML_Mini_project/Data/genres_original/disco/disco.00000.wav" 
+    new_song_path = "/Users/abhishek_r/Desktop/Programs/ML_LAB/ML_Mini_project/Data/genres_original/disco/disco.00000.wav"
     predict_genre(new_song_path, best_model, data["mapping"])
